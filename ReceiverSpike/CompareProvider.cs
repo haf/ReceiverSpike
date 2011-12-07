@@ -19,6 +19,16 @@ namespace ReceiverSpike
 			_ordComp = comparer;
 		}
 
+		public static IEqualityComparer<Event> EqComp
+		{
+			get { return _eqComp; }
+		}
+
+		public static IComparer<Event> OrdComp
+		{
+			get { return _ordComp; }
+		}
+
 		[Pure]
 		internal static string Type<T>(this T _)
 			where T : Event
@@ -26,7 +36,7 @@ namespace ReceiverSpike
 			return typeof (T).FullName;
 		}
 
-		public class EventSortable : 
+		public class EventSortable :
 			IsSortable
 		{
 			readonly Event _event;

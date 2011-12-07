@@ -13,13 +13,14 @@ namespace ReceiverSpike
 		static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
 		readonly Filter<IsSortable> _bloomFilter;
-		readonly IPriorityQueue<IsSortable> _priorityQueue;
+		readonly TreeSet<Event> _allFutures;
+		readonly IntervalHeap<Event> _futurePrioQ;
 		
 		/// <summary>min accepted version (ulong) of event</summary>
 		ulong _maxAcceptedItem;
 
 		/// <summary>max pending item of event</summary>
-		ulong _minPendingItem;
+		ulong _minPendingItem = ulong.MaxValue;
 
 		/// <summary>the number of duplicates this actor has seen, can be a sign of a broken msg broker</summary>
 		ulong _duplicates;
@@ -34,7 +35,8 @@ namespace ReceiverSpike
 
 			// TODO: after initial capacity, we need to re-initialize a bloom filter!
 			_bloomFilter = new BloomFilter<IsSortable>(initialCapacity);
-			_priorityQueue = new IntervalHeap<IsSortable>(initialCapacity);
+			_allFutures = new TreeSet<Event>(CompareProvider.OrdComp, CompareProvider.EqComp);
+			_futurePrioQ = new IntervalHeap<Event>(initialCapacity, CompareProvider.OrdComp);
 
 			inbox.Loop(loop =>
 				{
@@ -52,31 +54,26 @@ namespace ReceiverSpike
 							Contract.Requires(msg != null);
 							Contract.Requires(msg.Body.Event.AggregateId.Equals(aggregateId));
 
-							var change = UpdateBookKeeping(msg.Body.Event);
+							var @event = msg.Body.Event;
+
+							var change = UpdateBookKeeping(@event);
 
 							if ((change & BookKeepingChange.GotNext) > 0)
-								msg.Respond(new EventAcceptedImpl(msg.Body.Event));
+								msg.Respond(new EventAcceptedImpl(@event));
 
-							if ((change & BookKeepingChange.GotFuture) > 0)
-								_priorityQueue.Add(msg.Body.Event.Sortable());
+							if ((change & BookKeepingChange.GotFuture) > 0
+								&& !_allFutures.Contains(@event))
+							{
+								_allFutures.Add(@event);
+								_futurePrioQ.Add(@event); // for perf
+							}
 
 							if ((change & BookKeepingChange.GapClosedWithMissing) > 0)
-								FlushBuffer(msg);
+								ProcessFutures(msg.ResponseChannel);
 
 							loop.Continue();
 						});
 				});
-		}
-
-		void FlushBuffer(Request<InsertEvent> msg)
-		{
-			while (_priorityQueue.Count > 0)
-			{
-				var evt = _priorityQueue.DeleteMin().Value;
-				var secondChange = UpdateBookKeeping(evt);
-				Contract.Assume(secondChange == BookKeepingChange.GotNext);
-				msg.ResponseChannel.Send(new EventAcceptedImpl(evt));
-			}
 		}
 
 		BookKeepingChange UpdateBookKeeping(Event evt)
@@ -93,21 +90,43 @@ namespace ReceiverSpike
 			if (evt.Version == _maxAcceptedItem + 1u)
 			{
 				if (_minPendingItem != _maxAcceptedItem
-				    && _minPendingItem == _maxAcceptedItem + 1u)
+				    && _minPendingItem == _maxAcceptedItem + 2u)
 				{
 					_maxAcceptedItem++;
 					return BookKeepingChange.GapClosedWithMissing | BookKeepingChange.GotNext;
 				}
 
+				_logger.Info(() => "got next message!");
+
 				_maxAcceptedItem++;
-				_minPendingItem++;
 				return BookKeepingChange.GotNext;
 			}
 
-			_logger.Info(() => "message reordering, got future message");
+			_logger.Info(() => "message out of order, got future message");
 
 			_minPendingItem = (uint) Math.Min(_minPendingItem, evt.Version);
 			return BookKeepingChange.GotFuture;
+		}
+
+		void ProcessFutures(UntypedChannel responseChannel)
+		{
+			while (!_futurePrioQ.IsEmpty)
+			{
+				var futureEvt = _futurePrioQ.FindMin();
+				Contract.Assume(futureEvt != null);
+				var bookKeeping = UpdateBookKeeping(futureEvt);
+
+				if ((bookKeeping & BookKeepingChange.GotFuture) > 0)
+				{
+					Contract.Assume(_minPendingItem == futureEvt.Version,
+						"because the prio q was sorted and update book keeping updated to set this value");
+					break;
+				}
+
+				// the removal from the tree set (_allFutures) could be done through a message
+				Contract.Assume(_allFutures.Remove(_futurePrioQ.DeleteMin()));
+				responseChannel.Send(new EventAcceptedImpl(futureEvt));
+			}
 		}
 
 		[Flags]

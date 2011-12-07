@@ -61,7 +61,7 @@ namespace ReceiverSpike
 							_logger.Trace(() => string.Format("furthering insert event#{0}", msg.Event));
 
 							GetOrCreateActor(msg.Event.AggregateId, inbox)
-								.Send(msg);
+								.Request(msg, inbox);
 
 							loop.Continue();
 						});

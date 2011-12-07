@@ -66,7 +66,7 @@ namespace ReceiverSpike
 							loop.Continue();
 						});
 
-					loop.Receive<Response<EventAccepted>>(response =>
+					loop.Receive<Message<EventAccepted>>(response =>
 						{
 							_logger.Trace(() => string.Format("child#{0} accepted event#{1}",
 								response.SenderAddress,

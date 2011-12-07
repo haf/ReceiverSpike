@@ -33,8 +33,6 @@ namespace ReceiverSpike
 			Contract.Requires(inbox != null);
 			Contract.Ensures(_bloomFilter != null);
 
-			// TODO: after initial capacity, we need to re-initialize a bloom filter!
-			_bloomFilter = new BloomFilter<IsSortable>(initialCapacity);
 			_allFutures = new TreeSet<Event>(CompareProvider.OrdComp, CompareProvider.EqComp);
 			_futurePrioQ = new IntervalHeap<Event>(initialCapacity, CompareProvider.OrdComp);
 
@@ -62,7 +60,7 @@ namespace ReceiverSpike
 								msg.Respond(new EventAcceptedImpl(@event));
 
 							if ((change & BookKeepingChange.GotFuture) > 0
-								&& !_allFutures.Contains(@event))
+								&& !_allFutures.Contains(@event)) // idemopotency
 							{
 								_allFutures.Add(@event);
 								_futurePrioQ.Add(@event); // for perf

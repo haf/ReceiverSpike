@@ -12,7 +12,6 @@ namespace ReceiverSpike
 	{
 		static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-		readonly Filter<IsSortable> _bloomFilter;
 		readonly TreeSet<Event> _allFutures;
 		readonly IntervalHeap<Event> _futurePrioQ;
 		
@@ -31,7 +30,6 @@ namespace ReceiverSpike
 			int initialCapacity = 10240)
 		{
 			Contract.Requires(inbox != null);
-			Contract.Ensures(_bloomFilter != null);
 
 			_allFutures = new TreeSet<Event>(CompareProvider.OrdComp, CompareProvider.EqComp);
 			_futurePrioQ = new IntervalHeap<Event>(initialCapacity, CompareProvider.OrdComp);
@@ -47,17 +45,17 @@ namespace ReceiverSpike
 							loop.Continue();
 						});
 
-					loop.Receive<Request<InsertEvent>>(msg =>
+					loop.Receive<Request<InsertEvent>>(insertReq =>
 						{
-							Contract.Requires(msg != null);
-							Contract.Requires(msg.Body.Event.AggregateId.Equals(aggregateId));
+							Contract.Requires(insertReq != null);
+							Contract.Requires(insertReq.Body.Event.AggregateId.Equals(aggregateId));
 
-							var @event = msg.Body.Event;
+							var @event = insertReq.Body.Event;
 
 							var change = UpdateBookKeeping(@event);
 
 							if ((change & BookKeepingChange.GotNext) > 0)
-								msg.Respond(new EventAcceptedImpl(@event));
+								insertReq.Respond(new EventAcceptedImpl(@event));
 
 							if ((change & BookKeepingChange.GotFuture) > 0
 								&& !_allFutures.Contains(@event)) // idemopotency
@@ -67,7 +65,7 @@ namespace ReceiverSpike
 							}
 
 							if ((change & BookKeepingChange.GapClosedWithMissing) > 0)
-								ProcessFutures(msg.ResponseChannel);
+								ProcessFutures(insertReq);
 
 							loop.Continue();
 						});
@@ -106,7 +104,7 @@ namespace ReceiverSpike
 			return BookKeepingChange.GotFuture;
 		}
 
-		void ProcessFutures(UntypedChannel responseChannel)
+		void ProcessFutures(Request<InsertEvent> request)
 		{
 			while (!_futurePrioQ.IsEmpty)
 			{
@@ -123,7 +121,7 @@ namespace ReceiverSpike
 
 				// the removal from the tree set (_allFutures) could be done through a message
 				Contract.Assume(_allFutures.Remove(_futurePrioQ.DeleteMin()));
-				responseChannel.Send(new EventAcceptedImpl(futureEvt));
+				request.Respond(new EventAcceptedImpl(futureEvt));
 			}
 		}
 

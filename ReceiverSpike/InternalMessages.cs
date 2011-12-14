@@ -29,6 +29,10 @@ namespace ReceiverSpike
 		}
 	}
 
+	public interface IsQueueCompleted
+	{
+	}
+
 	public interface QueryInternals
 	{
 		Guid AggregateId { get; }

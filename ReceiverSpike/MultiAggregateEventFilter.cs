@@ -12,10 +12,11 @@ namespace ReceiverSpike
 	/// <summary>
 	/// 	Supervisor of the per-aggregate event filters.
 	/// </summary>
-	public class EventFilter
+	public class MultiAggregateEventFilter
 		: IObservable<Event>, Actor, IDisposable
 	{
 		readonly IScheduler _scheduler;
+		readonly ActorRef _parent;
 
 		static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
@@ -31,16 +32,20 @@ namespace ReceiverSpike
 		/// <param name="eventConsumer">The type of the consumer.</param>
 		/// <param name="inbox">The actor inbox</param>
 		/// <param name="scheduler">The scheduler on which to schedule things</param>
-		public EventFilter(Type eventConsumer,Inbox inbox, IScheduler scheduler)
+		/// <param name="parent">The parent object/actor that created this object.</param>
+		public MultiAggregateEventFilter(Type eventConsumer, Inbox inbox, 
+			IScheduler scheduler, ActorRef parent)
 		{
 			Contract.Requires(eventConsumer != null);
 			Contract.Requires(inbox != null);
 			Contract.Requires(scheduler != null);
+			Contract.Requires(parent != null);
 
 			_scheduler = scheduler;
+			_parent = parent;
+
 			_subject = new Subject<Event>(scheduler);
 			_typeFilter = ReflectFilter(eventConsumer);
-
 			_children = new Dictionary<Guid, ActorRef>();
 
 			inbox.Loop(loop =>
@@ -66,21 +71,29 @@ namespace ReceiverSpike
 							loop.Continue();
 						});
 
-					loop.Receive<Message<EventAccepted>>(response =>
+					loop.Receive<Message<EventAccepted>>(message =>
 						{
 							_logger.Trace(() => string.Format("child#{0} accepted event#{1}",
-								response.SenderAddress,
-								response.Body.Event));
+								message.SenderAddress,
+								message.Body.Event));
 
-							_subject.OnNext(response.Body.Event);
+							//_subject.OnNext(response.Body.Event);
+							_parent.Send<EventAccepted>(message);
 
 							loop.Continue();
 						});
-
-					loop.Receive<CompleteObservable>(co =>
+					loop.Receive<Response<EventAccepted>>(response =>
 						{
-							_subject.OnCompleted();
+							_logger.Trace("got response");
+							_parent.Send(response.Body);
+							loop.Continue();
+						});
 
+					//loop.Receive<CompleteObservable>(co =>
+					loop.Receive<Request<IsQueueCompleted>>(req =>
+						{
+							//_subject.OnCompleted();
+							req.Respond();
 							loop.Continue();
 						});
 				});

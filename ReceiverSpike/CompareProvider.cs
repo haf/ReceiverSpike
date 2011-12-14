@@ -49,13 +49,11 @@ namespace ReceiverSpike
 
 			bool IEquatable<IsSortable>.Equals(IsSortable other)
 			{
-				Contract.Requires(other != null);
 				return _eqComp.Equals(_event, other.Value);
 			}
 
 			int IComparable<IsSortable>.CompareTo(IsSortable other)
 			{
-				Contract.Requires(other != null);
 				//Contract.Ensures(Contract.Result<int>() == -1 || Contract.Result<int>() == 0 || Contract.Result<int>() == 1);
 				return _ordComp.Compare(_event, other.Value);
 			}
@@ -64,7 +62,6 @@ namespace ReceiverSpike
 			{
 				get
 				{
-					Contract.Ensures(Contract.Result<Event>() != null);
 					return _event;
 				}
 			}
@@ -80,9 +77,6 @@ namespace ReceiverSpike
 			[Pure]
 			bool IEqualityComparer<Event>.Equals(Event x, Event y)
 			{
-				Contract.Requires(x != null);
-				Contract.Requires(y != null);
-
 				return ReferenceEquals(x, y) || x.AggregateId.Equals(y.AggregateId) && x.Version.Equals(y.Version);
 			}
 
@@ -95,9 +89,6 @@ namespace ReceiverSpike
 			[Pure]
 			int IComparer<Event>.Compare(Event x, Event y)
 			{
-				Contract.Requires(x != null);
-				Contract.Requires(y != null);
-
 				// we can skip checking the type,
 				// since the invariant of events from ARs is
 				// that they don't publish multiple events

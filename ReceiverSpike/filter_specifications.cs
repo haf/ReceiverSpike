@@ -55,30 +55,38 @@ namespace ReceiverSpike
 
 	#endregion
 
-	[Subject(typeof(MultiAggregateEventFilter), "the subscribed values returned from the event heap")]
+	[Subject(typeof(MultiAggregateEventFilter), "should return only the correctly")]
 	public class when_inserting_multiple_events_they_are_filtered_spec 
 		: finicky_consumer_context
 	{
-		Because I_am_adding_two_nodes_of_different_types = () => with_filter(supervisor =>
+		Because I_am_adding_two_nodes_of_different_types = () => with_filter(topmost_filter =>
 			{
-				supervisor.Send(new InsertEventCmd(new MsgB(arId, 1L)));
-				supervisor.Send(new InsertEventCmd(new MsgA(arId, 2L)));
-			});
+				topmost_filter.Send(new InsertEventCmd(new MsgB(arId, 1L)));
+				topmost_filter.Send(new InsertEventCmd(new MsgA(arId, 2L)));
+			}, 1);
 
-		It should_only_contain_one_item = () => returned.Count().ShouldEqual(1);
-		It should_only_contain_a_message_b = () => returned.ShouldContainOnly(new MsgB(arId, 1L));
+		It should_only_contain_one_item = () => 
+			returned.Count().ShouldEqual(1);
+		It should_only_contain_a_message_b = 
+			() => CompareProvider.EqComp.Equals(returned[0], new MsgB(arId, 1L)).ShouldBeTrue();
 	}
 
 	[Subject("the event heap")]
 	public class initial_status_of_event_heap_spec
 		: heap_internal_state_context
 	{
-		Establish that_I_dont_add_any_messages = () => with_filter(_ => { });
-		It should_reply_with_event_heap_state_message = () => reply.Value.ShouldNotBeNull();
-		It should_have_default_max_accepted_item_mai = () => reply.Value.MaxAcceptedItem.ShouldEqual(0UL);
+		Establish that_I_dont_add_any_messages = () => with_filter(_ => { }, 0);
+
+		Because I_query_internal_state =
+			() => reply = query_internal_state();
+
+		static EventHeapState reply;
+
+		It should_reply_with_event_heap_state_message = () => reply.ShouldNotBeNull();
+		It should_have_default_max_accepted_item_mai = () => reply.MaxAcceptedItem.ShouldEqual(0UL);
 	}
 
-	[Subject(typeof(MultiAggregateEventFilter))]
+	[Subject(typeof (MultiAggregateEventFilter))]
 	public class status_of_event_heap_after_adding_similar_messages_spec
 		: heap_internal_state_context
 	{
@@ -91,13 +99,18 @@ namespace ReceiverSpike
 				i(new MsgB(arId, 4UL)); // B
 				i(new MsgA(arId, 5UL));
 				i(new MsgB(arId, 6UL)); // B
-			});
+			}, 3);
+
+		Because I_query_internal_state = 
+			() => reply = query_internal_state();
+
+		static EventHeapState reply;
 
 		It should_only_reply_three = 
 			() => returned.Count().ShouldEqual(3);
 
 		It should_have_max_accepted_item_mai =
-			() => reply.Value.MaxAcceptedItem.ShouldEqual(6UL);
+			() => reply.MaxAcceptedItem.ShouldEqual(6UL);
 
 		It should_have_returned_three_msg_b = 
 			() => returned.ShouldContain(new MsgB(arId, 3UL), new MsgB(arId, 4UL), new MsgB(arId, 6UL));
@@ -117,13 +130,18 @@ namespace ReceiverSpike
 				i(new MsgB(arId, 4UL)); // B
 				i(new MsgA(arId, 5UL));
 				i(new MsgB(arId, 6UL)); // B
-			});
+			}, 1);
+
+		Because I_query_internal_state =
+			() => reply = query_internal_state();
+
+		static EventHeapState reply;
 
 		It should_have_a_max_accepted_item_mai =
-			() => reply.Value.MaxAcceptedItem.ShouldEqual(1UL);
+			() => reply.MaxAcceptedItem.ShouldEqual(1UL);
 
 		It should_have_a_min_pending_item =
-			() => reply.Value.MinPendingItem.ShouldEqual(4UL);
+			() => reply.MinPendingItem.ShouldEqual(4UL);
 	}
 
 }

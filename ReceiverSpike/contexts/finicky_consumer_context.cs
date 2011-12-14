@@ -9,6 +9,7 @@ using System.Concurrency;
 using System.Linq;
 using Machine.Specifications;
 using Stact;
+using Stact.Internal;
 
 namespace ReceiverSpike.contexts
 {
@@ -37,7 +38,6 @@ namespace ReceiverSpike.contexts
 										returned.Add(msg.Event);
 										loop.Continue();
 									});
-								loop.Continue();
 							});
 					});
 
@@ -52,12 +52,13 @@ namespace ReceiverSpike.contexts
 		/// after calling this method, the actor is dead
 		/// </summary>
 		/// <param name="action"></param>
-		protected static void with_filter(Action<ActorRef> action)
+		/// <param name="endNoOfItems"></param>
+		protected static void with_filter(Action<ActorRef> action, int endNoOfItems)
 		{
 			action(eventFilter);
 			testScheduler.Run();
-
-			drain.SendRequestWaitForResponse<IsQueueCompleted>(TimeSpan.FromDays(1));
+			while (returned.Count != endNoOfItems)
+				continue;
 		}
 	}
 }

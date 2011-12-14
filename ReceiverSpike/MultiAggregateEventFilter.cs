@@ -71,29 +71,11 @@ namespace ReceiverSpike
 							loop.Continue();
 						});
 
-					loop.Receive<Message<EventAccepted>>(message =>
-						{
-							_logger.Trace(() => string.Format("child#{0} accepted event#{1}",
-								message.SenderAddress,
-								message.Body.Event));
-
-							//_subject.OnNext(response.Body.Event);
-							_parent.Send<EventAccepted>(message);
-
-							loop.Continue();
-						});
 					loop.Receive<Response<EventAccepted>>(response =>
 						{
-							_logger.Trace("got response");
-							_parent.Send(response.Body);
-							loop.Continue();
-						});
-
-					//loop.Receive<CompleteObservable>(co =>
-					loop.Receive<Request<IsQueueCompleted>>(req =>
-						{
-							//_subject.OnCompleted();
-							req.Respond();
+							_logger.Trace(() => "got event accepted");
+							if (_typeFilter(response.Body.Event))
+								_parent.Send(response.Body);
 							loop.Continue();
 						});
 				});

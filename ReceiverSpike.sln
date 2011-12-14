@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReceiverSpike", "ReceiverSpike\ReceiverSpike.csproj", "{6E98859A-E73D-470B-927B-10C903269445}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DomainEventFilter", "DomainEventFilter\DomainEventFilter.fsproj", "{A8BB4DE9-B6C2-44D9-B069-83EA7FD7F12D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,10 @@ Global
 		{6E98859A-E73D-470B-927B-10C903269445}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6E98859A-E73D-470B-927B-10C903269445}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6E98859A-E73D-470B-927B-10C903269445}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8BB4DE9-B6C2-44D9-B069-83EA7FD7F12D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8BB4DE9-B6C2-44D9-B069-83EA7FD7F12D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8BB4DE9-B6C2-44D9-B069-83EA7FD7F12D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8BB4DE9-B6C2-44D9-B069-83EA7FD7F12D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

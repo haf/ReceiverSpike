@@ -17,29 +17,29 @@ type Options = {
       logger = { new Logger with member __.trace format = Printf.kprintf (printfn "%A: %s" System.DateTime.Now) format } 
     }
 
-type Event = {
+type Evt = {
   Version : uint64;
   Type : string;
   ArId : Guid
   }
 
 type Internals = {
-  MaxAcceptedItem : Event option;
-  MinPendingItem : Event option;
-  Futures : Event Set;
+  MaxAcceptedItem : Evt option;
+  MinPendingItem : Evt option;
+  Futures : Evt Set;
   Duplicates : int
   }
 
 /// The type of messages that a single-filter can work on
 type SubMsg = QueryInternals of Internals AsyncReplyChannel
-              | InsertEvent of Event
+              | InsertEvent of Evt
               | Drain // drain the future "queue"
               | Exit
 
 /// The type of messages that a multi-filter can work on
 type SupMsg = QueryAllInternals of (Guid * Internals) seq AsyncReplyChannel
-              | InsertEvent of Event
-              | Yield of Event
+              | InsertEvent of Evt
+              | Yield of Evt
               | Exit
 
 let singleFilter options (supervisor : MailboxProcessor<SupMsg>) =
@@ -121,28 +121,3 @@ let multiFilter options (supervisor : MailboxProcessor<_>) =
       | Exit          -> return ()
       }
     loop (Map.empty))
-    
-
-// test-code:
-let aaaa = Guid.NewGuid()
-let mutable sub = None;
-let coord = MailboxProcessor<SupMsg>.Start(fun inbox ->
-  printfn "test: started"
-  let s = singleFilter Options.def inbox
-  let m = multiFilter Options.def inbox
-  sub <- Some(s)
-  let rec loop() = async {
-    let internals = s.PostAndReply(fun chan -> QueryInternals(chan))
-    printfn "%s - test: internals: %A" (DateTime.Now.ToString()) internals
-    let! gotten = inbox.Receive()
-    match gotten with 
-    | Yield(event) -> printfn "%s - got actual event: %A" (DateTime.Now.ToString()) event ; return! loop()
-    | _ -> return! loop()
-  }
-  loop())
-  
-sub.Value.Post (SubMsg.InsertEvent({Version = 1UL; Type = ""; ArId = aaaa }))
-sub.Value.Post (SubMsg.InsertEvent({Version = 2UL; Type = ""; ArId = aaaa }))
-sub.Value.Post (SubMsg.InsertEvent({Version = 3UL; Type = ""; ArId = aaaa }))
-sub.Value.Post (SubMsg.InsertEvent({Version = 4UL; Type = ""; ArId = aaaa }))
-let res = sub.Value.PostAndReply(fun chan -> QueryInternals(chan))

@@ -8,9 +8,9 @@
     <ProjectGuid>{a8bb4de9-b6c2-44d9-b069-83ea7fd7f12d}</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>DomainEventFilter</RootNamespace>
-    <AssemblyName>DomainEventFilter</AssemblyName>
+    <AssemblyName>Tralld</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <Name>DomainEventFilter</Name>
+    <Name>Tralld</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -20,7 +20,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\DomainEventFilter.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\Tralld.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -39,7 +39,9 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Extensions.fs" />
     <Compile Include="Tralld.fs" />
+    <Compile Include="TralldCLR.fs" />
     <None Include="Script.fsx" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\FSharp\1.0\Microsoft.FSharp.Targets" Condition="!Exists('$(MSBuildBinPath)\Microsoft.Build.Tasks.v4.0.dll')" />
